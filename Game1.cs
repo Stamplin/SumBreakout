@@ -55,10 +55,6 @@ namespace SumBreakout
         int leftScreenMargin = 10;
         int topScreenMargin = 10;
 
-       
-
-
-
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -83,14 +79,13 @@ namespace SumBreakout
             brickRect = new Rectangle(0, 0, 50, 20);
 
             //spawn bricks in grid with gap between
-
-            for (int i = 0; i < numberOfColumns; i++)
+            for (int i = 0; i < 10; i++)
             {
-                for (int j = 0; j < numberOfRows; j++)
+                for (int j = 0; j < 10; j++)//rows
                 {
-                    int x = leftScreenMargin + i * (brickActualWidth + desiredHorizontalGap);
-                    int y = topScreenMargin + j * (brickActualHeight + desiredVerticalGap);
-                    bricks.Add(new Rectangle(x, y, brickActualWidth, brickActualHeight));
+                    int x = i * (80 + 11);//width
+                    int y = j * (20 + 5); //height
+                    bricks.Add(new Rectangle(x, y, 75, 20));
                 }
             }
 
@@ -171,16 +166,7 @@ namespace SumBreakout
                     ballRect.X = paddleRect.X + paddleRect.Width / 2 - ballRect.Width / 2;
                     ballRect.Y = paddleRect.Y - ballRect.Height;
 
-
-                    //random direction
-                    if (random.NextDouble() < 0.5)
-                    {
-                        ballSpeedX = -5;
-                    }
-                    else
-                    {
-                        ballSpeedX = 5;
-                    }
+                    ballSpeedX = 5;
                     ballSpeedY = -5;
                 }
 
