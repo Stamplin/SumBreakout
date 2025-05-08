@@ -4,34 +4,14 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
+
 namespace SumBreakout
 {
     public class Game1 : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
-
-        //textures
-        Texture2D ballTexture, brickTexture, paddleTexture;
-
-        //rectangles
-        Rectangle ballRect, paddleRect, brickRect;
-
-        //floats
-        float ballSpeedX, ballSpeedY;
-
-        //mousestate
-        MouseState mouseState;
-
-        //bricks stuff
-        List<Rectangle> bricks = new List<Rectangle>();
-
-        //bool game start
-        bool gameStart = false;
-
-        //keyboard
-        static KeyboardState keyboardState, PreviousKeyboardState;
-
+        
         //activates on first press
         public static bool OnPress(KeyboardState KeyboardState, KeyboardState PreviousKeyboardStat, Keys _Key)
         {
@@ -42,10 +22,29 @@ namespace SumBreakout
             return false;
         }
 
-        //random
-        Random random = new Random();
+        
+        //Paddle stuff
+
+        Texture2D paddleTexture;
+        Rectangle paddleRect;
+        float ballSpeedX, ballSpeedY;
+        //more paddle logic
+        float ballHitX;
+        float paddleThird;
+        float edgeSteerX;
+        float edgeBoostY;
 
 
+        //Ball stuff
+
+        Texture2D ballTexture;
+        Rectangle ballRect;
+
+        //Block stuff
+
+        Texture2D brickTexture;
+        Rectangle brickRect;
+        List<Rectangle> bricks = new List<Rectangle>();
         //brick properties 
         int brickActualWidth = 80;
         int brickActualHeight = 20;
@@ -56,16 +55,16 @@ namespace SumBreakout
         int leftScreenMargin = 10;
         int topScreenMargin = 10;
 
+        //Shared stuff
+
+        MouseState mouseState;
+        Random random = new Random();
+        bool gameStart = false;
+        static KeyboardState keyboardState, PreviousKeyboardState;
         //import soundeffects
         SoundEffect ballSound, paddleSound, brickSound;
         SoundEffectInstance ballSoundInstance, paddleSoundInstance, brickSoundInstance;
 
-        //more paddle logic
-        float ballHitX;
-        float paddleThird;
-        float edgeSteerX;
-        float edgeBoostY;
-          
 
 
         public Game1()
@@ -79,18 +78,14 @@ namespace SumBreakout
         {
             // TODO: Add your initialization logic here
 
-            //set res
-            _graphics.PreferredBackBufferWidth = 800;
-            _graphics.PreferredBackBufferHeight = 600;
-            _graphics.ApplyChanges();
-
-            //rectangles
-            ballRect = new Rectangle(0, 0, 40, 40);
-
+            //Paddle stuff
             paddleRect = new Rectangle(0, 0, 228 / 2, 46 / 2);
 
-            brickRect = new Rectangle(0, 0, 50, 20);
+            //Ball stuff
+            ballRect = new Rectangle(0, 0, 40, 40);
 
+            //Block stuff
+            brickRect = new Rectangle(0, 0, 50, 20);
             //spawn bricks in grid with gap between
             for (int i = 0; i < 10; i++)
             {
@@ -102,12 +97,13 @@ namespace SumBreakout
                 }
             }
 
+            //Shared stuff
             //keystate
             keyboardState = Keyboard.GetState();
-
-            
-
-
+            //set res
+            _graphics.PreferredBackBufferWidth = 800;
+            _graphics.PreferredBackBufferHeight = 600;
+            _graphics.ApplyChanges();
 
             base.Initialize();
         }
@@ -126,8 +122,6 @@ namespace SumBreakout
             paddleSound = Content.Load<SoundEffect>("reflect");
             brickSound = Content.Load<SoundEffect>("break");
 
-
-
             // TODO: use this.Content to load your game content here
         }
 
@@ -135,51 +129,6 @@ namespace SumBreakout
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-
-            //mouse state
-            mouseState = Mouse.GetState();
-
-            //keystate
-            PreviousKeyboardState = keyboardState;
-            keyboardState = Keyboard.GetState();
-
-            //paddle logic paddle get mouse pos and follow
-            paddleRect.X = mouseState.X - paddleRect.Width / 2;
-            paddleRect.Y = 550;
-
-            //stop at edge
-            if (paddleRect.X < 0)
-            {
-                paddleRect.X = 0;
-            }
-            else if (paddleRect.X + paddleRect.Width > 800)
-            {
-                paddleRect.X = 800 - paddleRect.Width;
-            }
-
-            //sound
-            ballSoundInstance = ballSound.CreateInstance();
-            paddleSoundInstance = paddleSound.CreateInstance();
-            brickSoundInstance = brickSound.CreateInstance();
-
-
-
-
-
-            //if game start is flase
-            if (!gameStart)
-            {
-                ballRect.X = paddleRect.X + paddleRect.Width / 2 - ballRect.Width / 2;
-                ballRect.Y = paddleRect.Y - ballRect.Height;
-            }
-
-
-            //if space is press game start
-            if (Keyboard.GetState().IsKeyDown(Keys.Space))
-            {
-                gameStart = true;
-            }
-
 
 
             if (gameStart)
@@ -270,35 +219,62 @@ namespace SumBreakout
                 }
             }
 
-            //window title is current speed
-            Window.Title = ballSpeedX.ToString() + ", " + ballSpeedY.ToString();
+            //Paddle stuff
+
+            //paddle logic paddle get mouse pos and follow
+            paddleRect.X = mouseState.X - paddleRect.Width / 2;
+            paddleRect.Y = 550;
+            //stop at edge
+            if (paddleRect.X < 0)
+            {
+                paddleRect.X = 0;
+            }
+            else if (paddleRect.X + paddleRect.Width > 800)
+            {
+                paddleRect.X = 800 - paddleRect.Width;
+            }
+            //if game start is flase
+            if (!gameStart)
+            {
+                ballRect.X = paddleRect.X + paddleRect.Width / 2 - ballRect.Width / 2;
+                ballRect.Y = paddleRect.Y - ballRect.Height;
+            }
+
+            //Ball stuff
 
             //speed limit
             float maxSpeed = 11.0f;
             if (Math.Abs(ballSpeedX) > maxSpeed) ballSpeedX = Math.Sign(ballSpeedX) * maxSpeed;
             if (Math.Abs(ballSpeedY) > maxSpeed) ballSpeedY = Math.Sign(ballSpeedY) * maxSpeed;
 
+            //Block stuff
+
+
+
+
+            //Shared stuff
+
+            //mouse state
+            mouseState = Mouse.GetState();
+            //keystate
+            PreviousKeyboardState = keyboardState;
+            keyboardState = Keyboard.GetState();
+            //sound
+            ballSoundInstance = ballSound.CreateInstance();
+            paddleSoundInstance = paddleSound.CreateInstance();
+            brickSoundInstance = brickSound.CreateInstance();
+            //window title is current speed
+            Window.Title = ballSpeedX.ToString() + ", " + ballSpeedY.ToString();
             //reset if r is pressed
             if (Keyboard.GetState().IsKeyDown(Keys.R))
             {
                 gameStart = false;
             }
-
-         
-           
-
-
-
-
-
-
-
-
-
-
-
-
-
+            //if space is press game start
+            if (Keyboard.GetState().IsKeyDown(Keys.Space))
+            {
+                gameStart = true;
+            }
 
 
 
@@ -327,9 +303,6 @@ namespace SumBreakout
             {
                 _spriteBatch.Draw(brickTexture, brick, Color.White);
             }
-
-
-
 
             _spriteBatch.End();
 
