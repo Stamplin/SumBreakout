@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
@@ -55,6 +56,18 @@ namespace SumBreakout
         int leftScreenMargin = 10;
         int topScreenMargin = 10;
 
+        //import soundeffects
+        SoundEffect ballSound, paddleSound, brickSound;
+        SoundEffectInstance ballSoundInstance, paddleSoundInstance, brickSoundInstance;
+
+        //more paddle logic
+        float ballHitX;
+        float paddleThird;
+        float edgeSteerX;
+        float edgeBoostY;
+          
+
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -92,6 +105,8 @@ namespace SumBreakout
             //keystate
             keyboardState = Keyboard.GetState();
 
+            
+
 
 
             base.Initialize();
@@ -105,6 +120,11 @@ namespace SumBreakout
             ballTexture = Content.Load<Texture2D>("ball");
             paddleTexture = Content.Load<Texture2D>("paddle");
             brickTexture = Content.Load<Texture2D>("brick");
+
+            //load audio
+            ballSound = Content.Load<SoundEffect>("bounce");
+            paddleSound = Content.Load<SoundEffect>("reflect");
+            brickSound = Content.Load<SoundEffect>("break");
 
 
 
@@ -137,6 +157,10 @@ namespace SumBreakout
                 paddleRect.X = 800 - paddleRect.Width;
             }
 
+            //sound
+            ballSoundInstance = ballSound.CreateInstance();
+            paddleSoundInstance = paddleSound.CreateInstance();
+            brickSoundInstance = brickSound.CreateInstance();
 
 
 
@@ -161,13 +185,14 @@ namespace SumBreakout
             if (gameStart)
             {
                 //space launches ball
-                if (Keyboard.GetState().IsKeyDown(Keys.Space))
+                if (OnPress(keyboardState, PreviousKeyboardState, Keys.Space))
                 {
                     ballRect.X = paddleRect.X + paddleRect.Width / 2 - ballRect.Width / 2;
                     ballRect.Y = paddleRect.Y - ballRect.Height;
 
-                    ballSpeedX = 5;
+                    ballSpeedX = ((float)random.NextDouble() * 3.0f + 2.0f) * (random.Next(0, 2) == 0 ? -1 : 1);
                     ballSpeedY = -5;
+                    
                 }
 
                 //ball movement
@@ -175,21 +200,57 @@ namespace SumBreakout
                 ballRect.Y += (int)(float)ballSpeedY;
 
                 //ball bounce off edge
-                if (ballRect.X < 0 || ballRect.X + ballRect.Width > 800)
+                if (ballRect.X < 0)
                 {
                     ballSpeedX = -ballSpeedX;
+                    //fix
+                    ballRect.X = 0;
+                    //bounce sound
+                    ballSoundInstance.Play();
+
                 }
+                else if (ballRect.X + ballRect.Width > 800)
+                {
+                    ballSpeedX = -ballSpeedX;
+                    //fix
+                    ballRect.X = 800 - ballRect.Width;
+                    //bounce sound
+                    ballSoundInstance.Play();
+                }
+
                 if (ballRect.Y < 0)
                 {
                     ballSpeedY = Math.Abs(ballSpeedY);
+                    //fix
+                    ballRect.Y = 0;
+                    //bounce sound
+                    ballSoundInstance.Play();
                 }
 
-                //bounce off paddle
+                //bounce off paddle (W edges now)
                 if (ballRect.Intersects(paddleRect))
                 {
-                    ballSpeedY = -ballSpeedY;
-                    //fix
-                    ballRect.Y = paddleRect.Y - ballRect.Height;
+                    ballSpeedY = -ballSpeedY; 
+                    ballRect.Y = paddleRect.Y - ballRect.Height; 
+
+                    ballHitX = ballRect.X + ballRect.Width / 2.0f;
+                    paddleThird = paddleRect.Width / 3.0f;
+                    edgeSteerX = 7.0f;
+                    edgeBoostY = 1.15f;
+
+                    if (ballHitX < paddleRect.X + paddleThird) 
+                    {
+                        ballSpeedX = -edgeSteerX;
+                        ballSpeedY *= edgeBoostY;
+                    }
+                    else if (ballHitX > paddleRect.X + 2 * paddleThird) 
+                    {
+                        ballSpeedX = edgeSteerX;
+                        ballSpeedY *= edgeBoostY;
+                    }
+                    
+
+                    paddleSoundInstance.Play();
                 }
 
                 //if ball hits brick, destroy it
@@ -202,22 +263,20 @@ namespace SumBreakout
 
                         ballSpeedX *= 1.02f;
                         ballSpeedY *= 1.02f;
+
+                        //break sound
+                        brickSoundInstance.Play();
                     }
                 }
             }
 
             //window title is current speed
             Window.Title = ballSpeedX.ToString() + ", " + ballSpeedY.ToString();
-            //speed limit
-            if (ballSpeedX > 11)
-            {
-                ballSpeedX = 10;
-            }
-            if (ballSpeedY > 11)
-            {
-                ballSpeedY = 10;
-            }
 
+            //speed limit
+            float maxSpeed = 11.0f;
+            if (Math.Abs(ballSpeedX) > maxSpeed) ballSpeedX = Math.Sign(ballSpeedX) * maxSpeed;
+            if (Math.Abs(ballSpeedY) > maxSpeed) ballSpeedY = Math.Sign(ballSpeedY) * maxSpeed;
 
             //reset if r is pressed
             if (Keyboard.GetState().IsKeyDown(Keys.R))
