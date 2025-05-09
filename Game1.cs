@@ -16,7 +16,7 @@ namespace SumBreakout
         //activates on first press
         public static bool OnPress(KeyboardState KeyboardState, KeyboardState PreviousKeyboardStat, Keys _Key)
         {
-            if (KeyboardState.IsKeyDown(Keys.Space) && PreviousKeyboardStat.IsKeyUp(Keys.Space))
+            if (KeyboardState.IsKeyDown(_Key) && PreviousKeyboardStat.IsKeyUp(_Key)) 
             {
                 return true;
             }
@@ -29,7 +29,7 @@ namespace SumBreakout
 
         //block stuff
         Texture2D brickTexture;
-        List<Rectangle> bricks = new List<Rectangle>();
+        List<Brick> bricks = new List<Brick>();
 
         //brick properties 
         int brickActualWidth = 80;
@@ -45,7 +45,7 @@ namespace SumBreakout
         MouseState mouseState;
         Random random = new Random();
         bool gameStart = false;
-        static KeyboardState keyboardState, PreviousKeyboardState;
+        KeyboardState keyboardState, previousKeyboardState;
 
         //import soundeffects
         SoundEffect ballSound, paddleSound, brickSound;
@@ -56,7 +56,6 @@ namespace SumBreakout
         List<Texture2D> backgroundFrames;
         int currentBackgroundFrameIndex;
         float backgroundAnimationTimer;
-        private KeyboardState previousKeyboardState;
         const float TimePerBackgroundFrame = 1.0f / 24.0f;
         const int NumberOfBackgroundFrames = 81;
 
@@ -86,7 +85,7 @@ namespace SumBreakout
             InitializeBricks();
             ball.Reset(paddle.Bounds);
             keyboardState = Keyboard.GetState();
-            PreviousKeyboardState = keyboardState;
+            previousKeyboardState = keyboardState;
 
             //background
             backgroundFrames = new List<Texture2D>();
@@ -123,12 +122,7 @@ namespace SumBreakout
             // TODO: use this.Content to load your game content here
         }
 
-        protected override List<Rectangle> GetBricks()
-        {
-            return bricks;
-        }
-
-        protected override void Update(GameTime gameTime, List<Rectangle> bricks)
+        protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
@@ -222,9 +216,7 @@ namespace SumBreakout
             Window.Title = ball.GetSpeedString();
 
 
-            base.Update(gameTime,
-
-            base.GetBricks());
+            base.Update(gameTime); 
         }
 
         protected override void Draw(GameTime gameTime)
@@ -233,7 +225,7 @@ namespace SumBreakout
 
             _spriteBatch.Begin();
 
-            if (backgroundFrames.Count > 0)
+            if (backgroundFrames.Count > 0 && currentBackgroundFrameIndex < backgroundFrames.Count) 
             {
                 _spriteBatch.Draw(backgroundFrames[currentBackgroundFrameIndex],
                                   new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
@@ -241,15 +233,15 @@ namespace SumBreakout
             }
 
             //paddle
-            _spriteBatch.Draw(paddleTexture, paddleRect, Color.White);
+            paddle.Draw(_spriteBatch); 
 
             //ball
-            _spriteBatch.Draw(ballTexture, ballRect, Color.White);
+            ball.Draw(_spriteBatch); 
 
             //bricks
-            foreach (Rectangle brick in bricks)
+            foreach (Brick brick in bricks) 
             {
-                _spriteBatch.Draw(brickTexture, brick, Color.White);
+                brick.Draw(_spriteBatch, brickTexture); 
             }
 
             _spriteBatch.End();
@@ -274,6 +266,6 @@ namespace SumBreakout
                     bricks.Add(new Brick(brickBounds));
                 }
             }
-        } 
+        }
     }
 }
