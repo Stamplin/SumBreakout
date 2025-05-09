@@ -66,6 +66,14 @@ namespace SumBreakout
         SoundEffectInstance ballSoundInstance, paddleSoundInstance, brickSoundInstance;
 
 
+        //background
+        List<Texture2D> backgroundFrames;
+        int currentBackgroundFrameIndex;
+        float backgroundAnimationTimer;
+        const float TimePerBackgroundFrame = 1.0f / 24.0f;
+        const int NumberOfBackgroundFrames = 81;
+
+
 
         public Game1()
         {
@@ -86,6 +94,7 @@ namespace SumBreakout
 
             //Block stuff
             brickRect = new Rectangle(0, 0, 50, 20);
+
             //spawn bricks in grid with gap between
             for (int i = 0; i < 10; i++)
             {
@@ -105,6 +114,11 @@ namespace SumBreakout
             _graphics.PreferredBackBufferHeight = 600;
             _graphics.ApplyChanges();
 
+            //background
+            backgroundFrames = new List<Texture2D>();
+            currentBackgroundFrameIndex = 0;
+            backgroundAnimationTimer = 0f;
+
             base.Initialize();
         }
 
@@ -118,9 +132,15 @@ namespace SumBreakout
             brickTexture = Content.Load<Texture2D>("brick");
 
             //load audio
-            ballSound = Content.Load<SoundEffect>("bounce");
-            paddleSound = Content.Load<SoundEffect>("reflect");
+            ballSound = Content.Load<SoundEffect>("reflect");
+            paddleSound = Content.Load<SoundEffect>("bounce");
             brickSound = Content.Load<SoundEffect>("break");
+
+            //load background
+            for (int i = 1; i <= NumberOfBackgroundFrames; i++)
+            {
+                backgroundFrames.Add(Content.Load<Texture2D>($"bg/bg({i})"));
+            }
 
             // TODO: use this.Content to load your game content here
         }
@@ -129,6 +149,17 @@ namespace SumBreakout
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
+
+            //play background animation
+            if (backgroundFrames.Count > 0)
+            {
+                backgroundAnimationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (backgroundAnimationTimer >= TimePerBackgroundFrame)
+                {
+                    currentBackgroundFrameIndex = (currentBackgroundFrameIndex + 1) % backgroundFrames.Count;
+                    backgroundAnimationTimer -= TimePerBackgroundFrame; // Subtract to maintain accuracy
+                }
+            }
 
 
             if (gameStart)
@@ -291,6 +322,13 @@ namespace SumBreakout
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
             _spriteBatch.Begin();
+
+            if (backgroundFrames.Count > 0)
+            {
+                _spriteBatch.Draw(backgroundFrames[currentBackgroundFrameIndex],
+                                  new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
+                                  Color.White);
+            }
 
             //paddle
             _spriteBatch.Draw(paddleTexture, paddleRect, Color.White);
