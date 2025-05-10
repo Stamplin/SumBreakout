@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace SumBreakout
 {
@@ -12,6 +13,18 @@ namespace SumBreakout
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
+
+        //enums for gamestates
+        public enum GameState
+        {
+            Intro,
+            Game,
+            Win,
+            Lose
+        }
+
+        //screens for gamestates
+        private Texture2D introScreen, winScreen, loseScreen;
 
         //activates on first press
         public static bool OnPress(KeyboardState KeyboardState, KeyboardState PreviousKeyboardStat, Keys _Key)
@@ -51,6 +64,12 @@ namespace SumBreakout
         SoundEffect ballSound, paddleSound, brickSound;
         SoundEffectInstance ballSoundInstance, paddleSoundInstance, brickSoundInstance;
 
+        //music
+        private SoundEffect backgroundMusicEffect; 
+        private SoundEffectInstance backgroundMusicInstance;
+        //voice line
+        private SoundEffect introAudio, Gameaudio, WinAudio, LoseAudio;
+        private SoundEffectInstance introAudioInstance, GameaudioInstance, WinAudioInstance, LoseAudioInstance;
 
         //background
         List<Texture2D> backgroundFrames;
@@ -58,6 +77,9 @@ namespace SumBreakout
         float backgroundAnimationTimer;
         const float TimePerBackgroundFrame = 1.0f / 24.0f;
         const int NumberOfBackgroundFrames = 81;
+
+        //gamestate
+        private GameState currentGameState;
 
 
 
@@ -80,6 +102,10 @@ namespace SumBreakout
             //objects
             paddle = new Paddle(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
             ball = new Ball(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+
+            //reset game
+            currentGameState = GameState.Intro;
+            ResetGame();
 
             //setup
             InitializeBricks();
@@ -113,11 +139,25 @@ namespace SumBreakout
             paddleSoundInstance = paddleSound.CreateInstance();
             brickSoundInstance = brickSound.CreateInstance();
 
+            //lod music
+            backgroundMusicEffect = Content.Load<SoundEffect>("bgMusic");
+
+            //load voice lines
+            introAudio = Content.Load<SoundEffect>("voice/intro");
+            Gameaudio = Content.Load<SoundEffect>("voice/game");
+            WinAudio = Content.Load<SoundEffect>("voice/win");
+            LoseAudio = Content.Load<SoundEffect>("voice/loss");
+
             //load background
             for (int i = 1; i <= NumberOfBackgroundFrames; i++)
             {
                 backgroundFrames.Add(Content.Load<Texture2D>($"bg/bg({i})"));
             }
+
+            //load screens
+            introScreen = Content.Load<Texture2D>("gamescreen/intro");
+            winScreen = Content.Load<Texture2D>("gamescreen/win");
+            loseScreen = Content.Load<Texture2D>("gamescreen/loss");
 
             // TODO: use this.Content to load your game content here
         }
@@ -132,91 +172,240 @@ namespace SumBreakout
             keyboardState = Keyboard.GetState();
             mouseState = Mouse.GetState();
 
-            //background
-            if (backgroundFrames.Count > 0)
+
+
+            //play and loop music
+            if (backgroundMusicInstance == null)
             {
-                backgroundAnimationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (backgroundAnimationTimer >= TimePerBackgroundFrame)
-                {
-                    currentBackgroundFrameIndex = (currentBackgroundFrameIndex + 1) % backgroundFrames.Count;
-                    backgroundAnimationTimer -= TimePerBackgroundFrame;
-                }
+                backgroundMusicInstance = backgroundMusicEffect.CreateInstance();
+                backgroundMusicInstance.IsLooped = true;
+                backgroundMusicInstance.Volume = 0.2f;
+                backgroundMusicInstance.Play();
+
+
             }
 
-            //paddle
-            paddle.Update(mouseState);
-
-
-            if (!gameStart)
+            //if screen intro
+            if (currentGameState == GameState.Intro)
             {
-                ball.StickToPaddle(paddle.Bounds);
-
-                if (OnPress(keyboardState, previousKeyboardState, Keys.Space))
+                if (introAudioInstance == null)
                 {
-                    gameStart = true;
-                    ball.Launch(paddle.Bounds, random);
+
+                    introAudioInstance = introAudio.CreateInstance();
+                    introAudioInstance.IsLooped = false;
+                    introAudioInstance.Play();
+                }
+
+                if (OnPress(keyboardState, previousKeyboardState, Keys.Enter))
+                {
+                    introAudioInstance?.Stop();
+                    introAudioInstance?.Dispose();
+                    introAudioInstance = null;
+                    currentGameState = GameState.Game;
                 }
             }
-            else
+            //if screen game
+            if (currentGameState == GameState.Game)
             {
-                if (!ball.IsMoving)
+
+                //play voice line
+                if (GameaudioInstance == null)
+                {
+                    backgroundMusicInstance.Volume = 0.1f;
+                    GameaudioInstance = Gameaudio.CreateInstance();
+                    GameaudioInstance.IsLooped = false;
+                    GameaudioInstance.Play();
+                    backgroundMusicInstance.Volume = 0.2f;
+                }
+                //background
+                if (backgroundFrames.Count > 0)
+                {
+                    backgroundAnimationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    if (backgroundAnimationTimer >= TimePerBackgroundFrame)
+                    {
+                        currentBackgroundFrameIndex = (currentBackgroundFrameIndex + 1) % backgroundFrames.Count;
+                        backgroundAnimationTimer -= TimePerBackgroundFrame;
+                    }
+                }
+
+                //paddle
+                paddle.Update(mouseState);
+
+
+                if (!gameStart)
                 {
                     ball.StickToPaddle(paddle.Bounds);
 
                     if (OnPress(keyboardState, previousKeyboardState, Keys.Space))
                     {
+                        gameStart = true;
                         ball.Launch(paddle.Bounds, random);
                     }
                 }
-                else //ball is moving
+                else
                 {
-                    ball.UpdateMovement();
-
-                    ball.HandleWallCollisions(ballSoundInstance);
-
-                    //paddle collision
-                    if (ball.CheckPaddleCollision(paddle.Bounds))
+                    if (!ball.IsMoving)
                     {
+                        ball.StickToPaddle(paddle.Bounds);
 
-                        ball.HandlePaddleHit(paddle.Bounds, paddleSoundInstance);
+                        if (OnPress(keyboardState, previousKeyboardState, Keys.Space))
+                        {
+                            ball.Launch(paddle.Bounds, random);
+                        }
                     }
-
-                    //brick collision logic
-
-                    int hitBrickIndex = ball.CheckBrickCollision(bricks);
-                    if (hitBrickIndex != -1)
+                    else //ball is moving
                     {
-                        bricks[hitBrickIndex].Hit(); //mark the Brick object as hit
+                        ball.UpdateMovement();
 
-                        ball.HandleBrickHit(brickSoundInstance);
+                        ball.HandleWallCollisions(ballSoundInstance);
+
+                        //paddle collision
+                        if (ball.CheckPaddleCollision(paddle.Bounds))
+                        {
+
+                            ball.HandlePaddleHit(paddle.Bounds, paddleSoundInstance);
+                        }
+
+                        //brick collision logic
+
+                        int hitBrickIndex = ball.CheckBrickCollision(bricks);
+                        if (hitBrickIndex != -1)
+                        {
+                            bricks[hitBrickIndex].Hit(); //mark the Brick object as hit
+
+                            ball.HandleBrickHit(brickSoundInstance);
+                        }
+
+                        bricks.RemoveAll(b => !b.IsActive); //remove inactive bricks
+
+                        ball.ApplySpeedLimit();
+
+                        //out of bounds check
+                        if (ball.Bounds.Y > _graphics.PreferredBackBufferHeight)
+                        {
+                            gameStart = false;
+                            //go to lose screen
+                            currentGameState = GameState.Lose;
+                        }
+
+                        //if all bricks are hit
+                        if (bricks.Count == 0)
+                        {
+                            gameStart = false;
+                            //go to win screen
+                            currentGameState = GameState.Win;
+                        }
                     }
+                }
 
-                    bricks.RemoveAll(b => !b.IsActive); //remove inactive bricks
-
-                    ball.ApplySpeedLimit();
-
-                    //out of bounds check
-                    if (ball.Bounds.Y > _graphics.PreferredBackBufferHeight)
-                    {
-                        gameStart = false;
-                        ball.Reset(paddle.Bounds);
-                        InitializeBricks(); //reset bricks when ball goes out
-                    }
+                //reset if r is pressed
+                if (OnPress(keyboardState, previousKeyboardState, Keys.R))
+                {
+                    gameStart = false;
+                    ball.Reset(paddle.Bounds);
+                    InitializeBricks();
                 }
             }
 
-            //reset if r is pressed
-            if (OnPress(keyboardState, previousKeyboardState, Keys.R))
+            //if screen win
+            else if (currentGameState == GameState.Win)
             {
-                gameStart = false;
-                ball.Reset(paddle.Bounds);
-                InitializeBricks();
+                if (WinAudioInstance == null)
+                {
+                    //stop bugging audio
+                    GameaudioInstance.Stop();
+                    GameaudioInstance.Dispose();
+                    GameaudioInstance = null;
+
+                    //lower volume
+                    if (backgroundMusicInstance != null)
+                    {
+                        backgroundMusicInstance.Volume = 0.1f;
+                    }
+
+                    WinAudioInstance = WinAudio.CreateInstance();
+                    WinAudioInstance.IsLooped = false;
+                    WinAudioInstance.Play();
+                }
+                //reset game
+                bool resetToIntro = false;
+
+                if (OnPress(keyboardState, previousKeyboardState, Keys.Space)) //space pressed
+                {
+                    resetToIntro = true;
+                }
+                else if (WinAudioInstance != null && WinAudioInstance.State == SoundState.Stopped) //audio stopped
+                {
+                    resetToIntro = true;
+                }
+
+                if (resetToIntro) //reset
+                {
+                    {
+                        WinAudioInstance.Stop();
+                        WinAudioInstance.Dispose();
+                    }
+                    WinAudioInstance = null;
+
+                    if (backgroundMusicInstance != null)
+                    {
+                        backgroundMusicInstance.Volume = 0.2f;
+                    }
+
+                    currentGameState = GameState.Intro;
+                    ResetGame();
+                }
+
+                //if screen lose
+                else if (currentGameState == GameState.Lose)
+                {
+                    if (LoseAudioInstance == null)
+                    {
+                        //stop bugging audio
+                        GameaudioInstance?.Stop();
+                        GameaudioInstance?.Dispose();
+                        GameaudioInstance = null;
+
+                        //lower volume
+                        if (backgroundMusicInstance != null)
+                        {
+                            backgroundMusicInstance.Volume = 0.1f;
+                        }
+
+
+                        LoseAudioInstance = LoseAudio.CreateInstance();
+                        LoseAudioInstance.IsLooped = false;
+                        LoseAudioInstance.Play();
+                    }
+                    //reset game
+                    bool resetToIntro = false;
+
+                    if (OnPress(keyboardState, previousKeyboardState, Keys.Space)) //space pressed
+                    {
+                        resetToIntro = true;
+                    }
+                    else if (LoseAudioInstance != null && LoseAudioInstance.State == SoundState.Stopped) //audio stopped
+                    {
+                        resetToIntro = true;
+                    }
+
+                    if (resetToIntro) //reset
+                    {
+                        LoseAudioInstance.Stop();
+                        LoseAudioInstance.Dispose();
+                        LoseAudioInstance = null;
+
+                        if (backgroundMusicInstance != null)
+                        {
+                            backgroundMusicInstance.Volume = 0.2f;
+                        }
+
+                        currentGameState = GameState.Intro;
+                        ResetGame();
+                    }
+                    base.Update(gameTime);
+                }
             }
-
-            Window.Title = ball.GetSpeedString();
-
-
-            base.Update(gameTime); 
         }
 
         protected override void Draw(GameTime gameTime)
@@ -225,24 +414,49 @@ namespace SumBreakout
 
             _spriteBatch.Begin();
 
-            if (backgroundFrames.Count > 0 && currentBackgroundFrameIndex < backgroundFrames.Count) 
+            //if screen intro
+            if (currentGameState == GameState.Intro)
             {
-                _spriteBatch.Draw(backgroundFrames[currentBackgroundFrameIndex],
-                                  new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
-                                  Color.White);
+                _spriteBatch.Draw(introScreen, new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight), Color.White);
             }
 
-            //paddle
-            paddle.Draw(_spriteBatch); 
 
-            //ball
-            ball.Draw(_spriteBatch); 
-
-            //bricks
-            foreach (Brick brick in bricks) 
+            //if screen game
+            if (currentGameState == GameState.Game)
             {
-                brick.Draw(_spriteBatch, brickTexture); 
+                if (backgroundFrames.Count > 0 && currentBackgroundFrameIndex < backgroundFrames.Count)
+                {
+                    _spriteBatch.Draw(backgroundFrames[currentBackgroundFrameIndex],
+                                      new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight),
+                                      Color.White);
+                }
+
+                //paddle
+                paddle.Draw(_spriteBatch);
+
+                //ball
+                ball.Draw(_spriteBatch);
+
+                //bricks
+                foreach (Brick brick in bricks)
+                {
+                    brick.Draw(_spriteBatch, brickTexture);
+                }
             }
+
+            //if screen win
+            if (currentGameState == GameState.Win)
+            {
+                _spriteBatch.Draw(winScreen, new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight), Color.White);
+            }
+
+            //if screen lose
+            if (currentGameState == GameState.Lose)
+            {
+                _spriteBatch.Draw(loseScreen, new Rectangle(0, 0, _graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight), Color.White);
+            }
+
+            
 
             _spriteBatch.End();
 
@@ -266,6 +480,13 @@ namespace SumBreakout
                     bricks.Add(new Brick(brickBounds));
                 }
             }
+        }
+
+        private void ResetGame()
+        {
+            paddle.Reset();
+            ball.Reset(paddle.Bounds);
+            InitializeBricks();
         }
     }
 }

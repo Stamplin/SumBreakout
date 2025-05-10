@@ -56,5 +56,12 @@ namespace SumBreakout
         {
             spriteBatch.Draw(texture, bounds, Color.White);
         }
+
+        //reset
+        public void Reset()
+        {
+            bounds.Y = 550;
+            bounds.X = screenWidth / 2 - bounds.Width / 2;
+        }
     }
 }
