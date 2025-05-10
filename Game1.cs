@@ -355,58 +355,60 @@ namespace SumBreakout
                     currentGameState = GameState.Intro;
                     ResetGame();
                 }
+            }
 
-                //if screen lose
-                else if (currentGameState == GameState.Lose)
+            //if screen lose
+            else if (currentGameState == GameState.Lose)
+            {
+                if (LoseAudioInstance == null)
                 {
-                    if (LoseAudioInstance == null)
+                    //stop bugging audio
+                    GameaudioInstance?.Stop();
+                    GameaudioInstance?.Dispose();
+                    GameaudioInstance = null;
+
+                    //lower volume
+                    if (backgroundMusicInstance != null)
                     {
-                        //stop bugging audio
-                        GameaudioInstance?.Stop();
-                        GameaudioInstance?.Dispose();
-                        GameaudioInstance = null;
-
-                        //lower volume
-                        if (backgroundMusicInstance != null)
-                        {
-                            backgroundMusicInstance.Volume = 0.1f;
-                        }
-
-
-                        LoseAudioInstance = LoseAudio.CreateInstance();
-                        LoseAudioInstance.IsLooped = false;
-                        LoseAudioInstance.Play();
-                    }
-                    //reset game
-                    bool resetToIntro = false;
-
-                    if (OnPress(keyboardState, previousKeyboardState, Keys.Space)) //space pressed
-                    {
-                        resetToIntro = true;
-                    }
-                    else if (LoseAudioInstance != null && LoseAudioInstance.State == SoundState.Stopped) //audio stopped
-                    {
-                        resetToIntro = true;
+                        backgroundMusicInstance.Volume = 0.1f;
                     }
 
-                    if (resetToIntro) //reset
-                    {
-                        LoseAudioInstance.Stop();
-                        LoseAudioInstance.Dispose();
-                        LoseAudioInstance = null;
 
-                        if (backgroundMusicInstance != null)
-                        {
-                            backgroundMusicInstance.Volume = 0.2f;
-                        }
-
-                        currentGameState = GameState.Intro;
-                        ResetGame();
-                    }
-                    base.Update(gameTime);
+                    LoseAudioInstance = LoseAudio.CreateInstance();
+                    LoseAudioInstance.IsLooped = false;
+                    LoseAudioInstance.Play();
                 }
+                //reset game
+                bool resetToIntro = false;
+
+                if (OnPress(keyboardState, previousKeyboardState, Keys.Space)) //space pressed
+                {
+                    resetToIntro = true;
+                }
+                else if (LoseAudioInstance != null && LoseAudioInstance.State == SoundState.Stopped) //audio stopped
+                {
+                    resetToIntro = true;
+                }
+
+                if (resetToIntro) //reset
+                {
+                    LoseAudioInstance.Stop();
+                    LoseAudioInstance.Dispose();
+                    LoseAudioInstance = null;
+
+                    if (backgroundMusicInstance != null)
+                    {
+                        backgroundMusicInstance.Volume = 0.2f;
+                    }
+
+                    currentGameState = GameState.Intro;
+                    ResetGame();
+                }
+                base.Update(gameTime);
             }
         }
+            
+        
 
         protected override void Draw(GameTime gameTime)
         {
